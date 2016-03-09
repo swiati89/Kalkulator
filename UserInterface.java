@@ -49,6 +49,9 @@ import javax.swing.JTable;
 import javax.swing.SwingConstants;
 import javax.swing.table.DefaultTableModel;
 import java.awt.Color;
+import javax.swing.ListSelectionModel;
+import java.awt.BorderLayout;
+import java.awt.Button;
 
 public class UserInterface {
 
@@ -81,16 +84,21 @@ public class UserInterface {
 			}
 		});
 	}
-	File userData = new File("usersData.xls");//tworze plik
+	File userData = new File("usersData.xls");//tworze plik z danymi uzytkownika
+	File foodData = new File ("foodData.xls");//tworze plik z baza danych ¿ywnosci	
 	String sheetName; //aktywny po zalogowaniu arkusz
 	User acctualUser = new User();
 	int lastRow;
 	int counter=0;//licznik rekordow w bazie
 	int acctSheetIndex;
-	String[][] data;
-	String[] columns = {"Data","Czas","Glikemia","Bolus"};
-	DefaultTableModel dtModel = new DefaultTableModel(data, columns);
+	String[][] dataUsers;
+	String[] columnsUsers = {"Data","Czas","Glikemia","Bolus"};
+	String[][] dataFood;
+	String[] columnsFood = {"Produkt","Energia","Bia³ko","T³uszcz","Wêglowodany"};
+	DefaultTableModel dtModelHistory = new DefaultTableModel(dataUsers, columnsUsers);
+	DefaultTableModel dtModelFood = new DefaultTableModel(dataFood, columnsFood);
 	Object[] tempRow;
+	Object[] tempRowFood;
 	SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm");
     SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.YYYY");
 	
@@ -101,7 +109,13 @@ public class UserInterface {
 	private JTextField tfActGlycemy;
 	private JTextField tfCalcilatedInsulinDose;
 	private JTable table;
+	private JTable tableMeal;
+	private JPanel panelHistory;
 	private JTable tableUserData;
+	private JPanel panelFood;
+	private JTable tableFood;
+	private JScrollPane scrollPane;
+	private Button btnAddFood;
 
 	/**
 	 * Create the application.
@@ -116,7 +130,7 @@ public class UserInterface {
 	private void initialize() {
 		frmKalkulatorDiabetyka = new JFrame();
 		frmKalkulatorDiabetyka.setTitle("Kalkulator Diabetyka");
-		frmKalkulatorDiabetyka.setBounds(100, 100, 450, 300);
+		frmKalkulatorDiabetyka.setBounds(100, 100, 580, 500);
 		frmKalkulatorDiabetyka.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frmKalkulatorDiabetyka.getContentPane().setLayout(new CardLayout(0, 0));
 		
@@ -126,39 +140,65 @@ public class UserInterface {
 		panelLogIn.setVisible(true);
 		
 		tfLogin = new JTextField();
-		tfLogin.setBounds(116, 59, 163, 20);
+		tfLogin.setBounds(195, 123, 163, 20);
 		panelLogIn.add(tfLogin);
 		tfLogin.setColumns(10);
 		
 		tfPassword = new JTextField();
-		tfPassword.setBounds(116, 115, 163, 20);
+		tfPassword.setBounds(195, 179, 163, 20);
 		panelLogIn.add(tfPassword);
 		tfPassword.setColumns(10);
 		
 		JLabel lblLogin = new JLabel("Login:");
-		lblLogin.setBounds(173, 34, 46, 14);
+		lblLogin.setBounds(249, 98, 46, 14);
 		panelLogIn.add(lblLogin);
 		
 		JLabel lblPassword = new JLabel("Haslo:");
-		lblPassword.setBounds(173, 90, 46, 14);
+		lblPassword.setBounds(249, 154, 46, 14);
 		panelLogIn.add(lblPassword);
 		
 		JButton btnLogin = new JButton("Zaloguj");
 		btnLogin.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {//modul logowania
+				//wczytujê baze danych zywnosci do programu
+				if(foodData.isFile()){
+					try {
+						HSSFWorkbook workbookFood = new HSSFWorkbook(new FileInputStream(foodData));
+						HSSFSheet sheetFood = workbookFood.getSheet("table");
+						int numOfFoodRows = sheetFood.getPhysicalNumberOfRows();
+						int firstRow =sheetFood.getFirstRowNum()+1;
+						//int cellquantity;
+						for (int i=firstRow; i<numOfFoodRows-1;i++){
+							
+							HSSFRow rowToPut = sheetFood.getRow(i);
+							tempRowFood =new Object[] {rowToPut.getCell(0),rowToPut.getCell(1),rowToPut.getCell(2),rowToPut.getCell(3),rowToPut.getCell(4)};
+							dtModelFood.addRow(tempRowFood);
+							//cellquantity =rowToPut.getLastCellNum() - rowToPut.getFirstCellNum();
+							//System.out.println(cellquantity);
+						}
+						//System.out.println("liczba wierszy w zywnosci: "+numOfFoodRows);
+					} catch (FileNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+				
 				//HSSFWorkbook workbook;
 				if (!userData.isFile()){
 					tfLoginInfo.setText("Podaj dane logowania,\n lub stwórz U¿ytkownika");
 				}else{
 				try {
-					HSSFWorkbook workbook = new HSSFWorkbook(new FileInputStream(userData));
-					int numOfSheets = workbook.getNumberOfSheets();
+					HSSFWorkbook workbookUsers = new HSSFWorkbook(new FileInputStream(userData));
+					int numOfSheets = workbookUsers.getNumberOfSheets();
 					
 					String password;
 					for ( int i=0; i<numOfSheets; i++){
 						//pobieram login i haslo
-						sheetName = workbook.getSheetName(i);
-						HSSFSheet sheet = workbook.getSheetAt(i);
+						sheetName = workbookUsers.getSheetName(i);
+						HSSFSheet sheet = workbookUsers.getSheetAt(i);
 						HSSFRow row = sheet.getRow(1);
 						HSSFCell cell = row.getCell(1);
 						password = cell.getStringCellValue();
@@ -181,7 +221,7 @@ public class UserInterface {
 							acctualUser.putValues(counter,cellToPut.getStringCellValue());//dzia³a dodawanie rekordow z bazy do obiektu
 							//dodawanie rekordow z bazy do tabeli
 							tempRow =new Object[] {rowToPut.getCell(0),rowToPut.getCell(1),rowToPut.getCell(2),rowToPut.getCell(3)};
-							dtModel.addRow(tempRow);
+							dtModelHistory.addRow(tempRow);
 							//glycemyChart.add(new Day(rowToPut.getCell(0)),rowToPut.getCell(2));
 						}
 						/*for(int k=0;k<acctualUser.glycemyArray.length-1;k++){//sprawdzam czy dziala uzupelnianie obiektu
@@ -192,7 +232,7 @@ public class UserInterface {
 						System.out.println("dlugosc macierzy:"+ acctualUser.glycemyArray.length);
 						
 					}else tfLoginInfo.setText("Niepoprawne has³o, lub nazwa u¿ytkownika");
-					workbook.close();
+					workbookUsers.close();
 				}
 					}
 				 catch (IOException e) {
@@ -200,9 +240,11 @@ public class UserInterface {
 					e.printStackTrace();
 				}
 			}
+				
 			}
+			
 		});
-		btnLogin.setBounds(147, 146, 100, 43);
+		btnLogin.setBounds(226, 210, 100, 43);
 		panelLogIn.add(btnLogin);
 		
 		btnAdUser = new JButton("Dodaj Osobe");
@@ -212,13 +254,13 @@ public class UserInterface {
 				panelLogIn.setVisible(false);
 			}
 		});
-		btnAdUser.setBounds(280, 228, 144, 23);
+		btnAdUser.setBounds(205, 264, 144, 23);
 		panelLogIn.add(btnAdUser);
 		
 		tfLoginInfo = new JTextField();
 		tfLoginInfo.setHorizontalAlignment(SwingConstants.LEFT);
 		tfLoginInfo.setEditable(false);
-		tfLoginInfo.setBounds(10, 228, 260, 20);
+		tfLoginInfo.setBounds(10, 431, 544, 20);
 		panelLogIn.add(tfLoginInfo);
 		tfLoginInfo.setColumns(10);
 		
@@ -288,17 +330,17 @@ public class UserInterface {
 								
 				if (userData.isFile()){
 					try {//otwieram plik do odczytu
-						HSSFWorkbook workbook = new HSSFWorkbook(new FileInputStream(userData));
+						HSSFWorkbook workbookUsers = new HSSFWorkbook(new FileInputStream(userData));
 						//HSSFSheet sheet = workbook.getSheet(newUser.getName());
-						int numOfSheets = workbook.getNumberOfSheets();
+						int numOfSheets = workbookUsers.getNumberOfSheets();
 						//tFNewUserInfo.setText(workbook.getSheetName(0));
 						int sheetInd = 0;
 						for ( int i=0; i<numOfSheets; i++,sheetInd++){//sprawdzamy czy uzytkownik o takiej nazwie istnieje
-							if (new String(workbook.getSheetName(i)).equals(newUser.getName())){//porownanie dwoch stringow
+							if (new String(workbookUsers.getSheetName(i)).equals(newUser.getName())){//porownanie dwoch stringow
 								tFNewUserInfo.setText("Uzytkownik o tej nazwie istnieje. WprowadŸ inna nazwê");	}}							
 							//}else {tFNewUserInfo.setText("chujnia");
-								HSSFSheet newSheet = workbook.createSheet();//nowy sheet
-								workbook.setSheetName(sheetInd, newUser.getName());
+								HSSFSheet newSheet = workbookUsers.createSheet();//nowy sheet
+								workbookUsers.setSheetName(sheetInd, newUser.getName());
 								HSSFRow row1 = newSheet.createRow(0);
 								HSSFRow row2 = newSheet.createRow(1);
 								HSSFRow row3 = newSheet.createRow(5);
@@ -323,7 +365,7 @@ public class UserInterface {
 								row3.createCell(3).setCellValue("Dawka Insuliny:");
 								
 								try {
-									workbook.write(new FileOutputStream(userData));
+									workbookUsers.write(new FileOutputStream(userData));
 								} catch (FileNotFoundException e) {
 									// TODO Auto-generated catch block
 									e.printStackTrace();
@@ -331,7 +373,7 @@ public class UserInterface {
 									// TODO Auto-generated catch block
 									e.printStackTrace();
 								}
-								workbook.close();
+								workbookUsers.close();
 													
 					} catch (IOException e) {
 						// TODO Auto-generated catch block
@@ -450,6 +492,10 @@ public class UserInterface {
 					acctRow.createCell(3).setCellValue(dose);		
 					acctRow.createCell(0).setCellValue(date);
 					acctRow.createCell(1).setCellValue(time);
+					lastRow = sheet.getLastRowNum();//aktualizacja danych w jtable po kliknieciu na oblicz
+					HSSFRow lastRowPut = sheet.getRow(lastRow);
+					tempRow =new Object[] {lastRowPut.getCell(0),lastRowPut.getCell(1),lastRowPut.getCell(2),lastRowPut.getCell(3)};
+					dtModelHistory.addRow(tempRow);
 															
 					try {
 						workbook.write(new FileOutputStream(userData));
@@ -479,14 +525,43 @@ public class UserInterface {
 		btnCalculateInsulinDose.setBounds(10, 135, 132, 39);
 		tabbedPaneCalculator.add(btnCalculateInsulinDose);
 		
-		tableUserData = new JTable(dtModel);
-		tableUserData.setBackground(new Color(175, 238, 238));
-		tableUserData.setBounds(139, 11, 280, 212);
-		tabbedPaneCalculator.add(tableUserData);
-		JScrollPane jsp = new JScrollPane(tableUserData);
-		tabbedPanelMainWindow.add(jsp);
-		tabbedPanelMainWindow.setTitleAt(1, "Historia");
+		tableMeal = new JTable();
+		tableMeal.setBounds(152, 11, 397, 163);
+		JScrollPane jspMeal = new JScrollPane();
+		tabbedPaneCalculator.add(tableMeal);
+		tableMeal.add(jspMeal);
+		
+		panelHistory = new JPanel();		
+		tabbedPanelMainWindow.addTab("Historia", null, panelHistory, null);
+		panelHistory.setLayout(new BorderLayout(0, 0));
+		
+		tableUserData = new JTable(dtModelHistory);
+		tableUserData.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+		panelHistory.add(tableUserData);
+		JScrollPane jspHistory= new JScrollPane(tableUserData);
+		panelHistory.add(jspHistory);
 		tableUserData.setFillsViewportHeight(true);
+		
+		panelFood = new JPanel();
+		tabbedPanelMainWindow.addTab("\u017Bywno\u015B\u0107", null, panelFood, null);
+		panelFood.setLayout(new BorderLayout(0, 0));
+		
+		tableFood = new JTable(dtModelFood);
+		panelFood.add(tableFood, BorderLayout.CENTER);
+		
+		btnAddFood = new Button("Dodaj do pisi\u0142ku");
+		btnAddFood.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				
+				
+				
+			}
+		});
+		btnAddFood.setActionCommand("Dodaj do posi\u0142ku");
+		panelFood.add(btnAddFood, BorderLayout.SOUTH);
+		
+		//scrollPane = new JScrollPane();
+		panelFood.add(new JScrollPane(tableFood));
 				
 		
 	}
