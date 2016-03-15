@@ -67,6 +67,11 @@ public class User {
 		return correctionDose;
 	}
 	
+	public int corectionDose(double carboMass){
+		int foodDose =(int)( carboMass /(double) insulinResistance);
+		return foodDose;
+	}
+	
 	public void  setGlycemyArray(int arraySize){
 		this.glycemyArray = new String[arraySize+1];//dodatkowa komórka do zapisu obliczonej wartoœci
 				

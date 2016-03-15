@@ -509,25 +509,24 @@ public class UserInterface {
 				acctualUser.setGlycemy(Integer.parseInt(tfActGlycemy.getText()));
 				//ustawic pole insulin resisstance
 				int insRes = acctualUser.getInsulinResistance();
-				String dose=null;
-				/*if(carboQuantity==0){
-					dose =Integer.toString(acctualUser.calculateInsulinDose(acctualUser.getGlycemy(), insRes));//poprawiæ zeby actuser mialo wartosc insulinoopornosci
-					tfCalcilatedInsulinDose.setText(dose);
-				}
-				else*/ if(carboQuantity!=0){
+				String dose=null;				
+				 if(carboQuantity!=0){
 					dose =Integer.toString(acctualUser.calculateInsulinDose(carboQuantity,acctualUser.getGlycemy(), insRes));//poprawiæ zeby actuser mialo wartosc insulinoopornosci
 					tfCalculatedInsulinDose.setText(dose);
 					System.out.println("dziala");
+					int corectionDose = acctualUser.corectionDose(carboQuantity);
+					tfMealCorrection.setText(Integer.toString(corectionDose));
 				}else{
 				dose =Integer.toString(acctualUser.calculateInsulinDose(acctualUser.getGlycemy(), insRes));//poprawiæ zeby actuser mialo wartosc insulinoopornosci
 				tfCalculatedInsulinDose.setText(dose);
 				}
 				
 				LocalDate acctDate = LocalDate.now();
-				 Calendar cal = Calendar.getInstance();
+				Calendar cal = Calendar.getInstance();
 			     
-			     String time = timeFormat.format(cal.getTime());
-			     String date = dateFormat.format(cal.getTime());
+			    String time = timeFormat.format(cal.getTime());
+			    String date = dateFormat.format(cal.getTime());
+			    carboQuantity=0;
 			    
 				//counter++;
 				try {
@@ -562,10 +561,7 @@ public class UserInterface {
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
-				}
-				/*for(int k=0;k<acctualUser.glycemyArray.length-1;k++){//sprawdzam czy dziala uzupelnianie obiektu
-					System.out.println(acctualUser.glycemyArray[k]);
-				}*/
+				}				
 			}
 		});
 		tabbedPaneCalculator.add(btnCalculateInsulinDose);
@@ -623,12 +619,9 @@ public class UserInterface {
 				//Double cq = Double.parseDouble(mealCarboQuantity);
 				
 				carboQuantity = carboQuantity + mealCarboQuantity;
-				System.out.println(carboQuantity);
-				//System.out.println(acctualUser.calculateInsulinDose(carboQuantity, acctualUser.getGlycemy(), acctualUser.getInsulinResistance()));
-				//System.out.println(tableFood.getValueAt(foodTableRow,4));
-				//dodac oblicznie bolusa na podstawie danych z tabeli
+				System.out.println(carboQuantity);				
 			    mealRow = new Object[] {tableFood.getValueAt(foodTableRow,0),tableFood.getValueAt(foodTableRow,1),
-			    		tableFood.getValueAt(foodTableRow,2),tableFood.getValueAt(foodTableRow,3),tableFood.getValueAt(foodTableRow,4)};
+			    tableFood.getValueAt(foodTableRow,2),tableFood.getValueAt(foodTableRow,3),tableFood.getValueAt(foodTableRow,4)};
 				dtModelMeal.addRow(mealRow);
 								
 			}
