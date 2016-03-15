@@ -1,6 +1,6 @@
 public class User {
 	private String name;
-	private double insulinResistance;
+	private int insulinResistance;
 	private double weight;
 	private int actGlycemy;
 	String [] glycemyArray;
@@ -18,11 +18,11 @@ public class User {
 		return name;
 	}
 	
-	public void setInsulinResistance(double insulinResistance){
+	public void setInsulinResistance(int insulinResistance){
 		this.insulinResistance = insulinResistance;
 	}
 	
-	public double getInsulinResistance(){
+	public int getInsulinResistance(){
 		return insulinResistance;
 	}
 	
@@ -50,11 +50,11 @@ public class User {
 		return password;
 	}
 	
-	public int calculateInsulinDose(int carboMass, int actualGlycemy, double insulinResistance){
-		double ww = carboMass / 10;
+	public int calculateInsulinDose(double carboMass, int actualGlycemy, int insulinResistance){
+		//double ww = carboMass / 10;
 		int glycemyAboveUnderNormal = actualGlycemy - 100;
-		double foodDose = ww / insulinResistance;
-		double correctionDose = glycemyAboveUnderNormal / insulinResistance;
+		int foodDose =(int)( carboMass /(double) insulinResistance);
+		int correctionDose = glycemyAboveUnderNormal / insulinResistance;
 		int insulinDose = (int) (foodDose + correctionDose);
 		
 		return insulinDose;

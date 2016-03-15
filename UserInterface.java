@@ -15,6 +15,7 @@ import jxl.biff.formula.ParseContext;
 
 import javax.swing.JTextField;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JButton;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
@@ -47,11 +48,18 @@ import java.awt.SystemColor;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.SwingConstants;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 import java.awt.Color;
+import java.awt.Component;
+
 import javax.swing.ListSelectionModel;
 import java.awt.BorderLayout;
 import java.awt.Button;
+import javax.swing.BoxLayout;
+import java.awt.Font;
+import java.awt.Toolkit;
 
 public class UserInterface {
 
@@ -94,20 +102,23 @@ public class UserInterface {
 	String[][] dataUsers;
 	String[] columnsUsers = {"Data","Czas","Glikemia","Bolus"};
 	String[][] dataFood;
-	String[] columnsFood = {"Produkt","Energia","Bia³ko","T³uszcz","Wêglowodany"};
+	String[] columnsFood = {"Produkt","Energia [kcal]","Bia³ko [g]","T³uszcz [g]","Wêglowodany [g]"};
 	DefaultTableModel dtModelHistory = new DefaultTableModel(dataUsers, columnsUsers);
 	DefaultTableModel dtModelFood = new DefaultTableModel(dataFood, columnsFood);
+	DefaultTableModel dtModelMeal = new DefaultTableModel(dataFood, columnsFood);
 	Object[] tempRow;
 	Object[] tempRowFood;
 	SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm");
     SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.YYYY");
+    double carboQuantity=0;//po wciscnieciu reset ma sie zerowaæ
+    Object[] mealRow;
 	
 	
 	private JTextField tfLoginInfo;
 	private JTabbedPane tabbedPanelMainWindow;
 	private JPanel tabbedPaneCalculator;
 	private JTextField tfActGlycemy;
-	private JTextField tfCalcilatedInsulinDose;
+	private JTextField tfCalculatedInsulinDose;
 	private JTable table;
 	private JTable tableMeal;
 	private JPanel panelHistory;
@@ -116,6 +127,9 @@ public class UserInterface {
 	private JTable tableFood;
 	private JScrollPane scrollPane;
 	private Button btnAddFood;
+	private JLabel lblMealCorrection;
+	private JTextField tfMealCorrection;
+	private JLabel lblPosiek;
 
 	/**
 	 * Create the application.
@@ -129,6 +143,7 @@ public class UserInterface {
 	 */
 	private void initialize() {
 		frmKalkulatorDiabetyka = new JFrame();
+		frmKalkulatorDiabetyka.setIconImage(Toolkit.getDefaultToolkit().getImage("C:\\Users\\Figo\\Desktop\\aplikacja Kalkulator diabetyka ver 0.01\\ikona.png"));
 		frmKalkulatorDiabetyka.setTitle("Kalkulator Diabetyka");
 		frmKalkulatorDiabetyka.setBounds(100, 100, 580, 500);
 		frmKalkulatorDiabetyka.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -211,6 +226,11 @@ public class UserInterface {
 						int filledRowsNum = lastRow - 5;//bo zaczynam uzupelnianie bazy od 5 wiersza
 						acctualUser.setName(sheetName);
 						acctualUser.setGlycemyArray(filledRowsNum);//pobrac ilosc rekordow z pliku
+						//pobieram insulinoopornosc
+						cell = row.getCell(2);
+						double iResDouble=cell.getNumericCellValue();
+						int iResInt =(int) iResDouble;
+						acctualUser.setInsulinResistance(iResInt);
 						//tworzenie wykresu 
 						
 						//TimeSeries glycemyChart = new TimeSeries("Glycemy",Day.class);
@@ -319,7 +339,7 @@ public class UserInterface {
 				User newUser = new User();
 				try{//wyjatek wprowadzenia niepoprawnych danych do dopracowania
 				newUser.setName(tfNewUserName.getText());
-				newUser.setInsulinResistance(Double.parseDouble(tfNewUserInsulinResistance.getText()));
+				newUser.setInsulinResistance(Integer.parseInt(tfNewUserInsulinResistance.getText()));
 				newUser.setWeight(Integer.parseInt(tfNewUserWeight.getText()));
 				newUser.setPassword(tfNewUserPassword.getText());
 				}catch(NumberFormatException n){
@@ -447,36 +467,62 @@ public class UserInterface {
 		
 		tabbedPaneCalculator = new JPanel();
 		tabbedPanelMainWindow.addTab("Kalkulator", null, tabbedPaneCalculator, null);
-		tabbedPaneCalculator.setLayout(null);
+		tabbedPaneCalculator.setLayout(new GridLayout(9, 2, 1, 2));
+		//tabbedPaneCalculator.setLayout(new BoxLayout(tabbedPaneCalculator, BoxLayout.Y_AXIS));
+		
+		JLabel lblActGlycemy = new JLabel("Aktualna glikemia:");
+		lblActGlycemy.setFont(new Font("Tahoma", Font.PLAIN, 20));
+		tabbedPaneCalculator.add(lblActGlycemy);
 		
 		tfActGlycemy = new JTextField();
-		tfActGlycemy.setBounds(31, 36, 86, 20);
+		tfActGlycemy.setFont(new Font("Tahoma", Font.PLAIN, 20));
 		tabbedPaneCalculator.add(tfActGlycemy);
 		tfActGlycemy.setColumns(10);
 		
-		JLabel lblActGlycemy = new JLabel("Aktualna glikemia:");
-		lblActGlycemy.setBounds(10, 11, 107, 14);
-		tabbedPaneCalculator.add(lblActGlycemy);
+		lblMealCorrection = new JLabel("Korekta na posi\u0142ek:");
+		lblMealCorrection.setFont(new Font("Tahoma", Font.PLAIN, 20));
+		tabbedPaneCalculator.add(lblMealCorrection);
 		
-		JLabel lblNewLabel_1 = new JLabel("Obliczona dawka insuliny:");
-		lblNewLabel_1.setBounds(10, 68, 132, 14);
-		tabbedPaneCalculator.add(lblNewLabel_1);
+		tfMealCorrection = new JTextField();
+		tfMealCorrection.setFont(new Font("Tahoma", Font.PLAIN, 20));
+		tfMealCorrection.setEditable(false);
+		tabbedPaneCalculator.add(tfMealCorrection);
+		tfMealCorrection.setColumns(10);
 		
-		tfCalcilatedInsulinDose = new JTextField();
-		tfCalcilatedInsulinDose.setEditable(false);
-		tfCalcilatedInsulinDose.setBounds(31, 93, 86, 20);
-		tabbedPaneCalculator.add(tfCalcilatedInsulinDose);
-		tfCalcilatedInsulinDose.setColumns(10);
+		JLabel lblCalculatedDose = new JLabel("Obliczona dawka insuliny:");
+		lblCalculatedDose.setFont(new Font("Tahoma", Font.PLAIN, 20));
+		tabbedPaneCalculator.add(lblCalculatedDose);
+		
+		tfCalculatedInsulinDose = new JTextField();
+		tfCalculatedInsulinDose.setFont(new Font("Tahoma", Font.PLAIN, 20));
+		tfCalculatedInsulinDose.setEditable(false);
+		tabbedPaneCalculator.add(tfCalculatedInsulinDose);
+		tfCalculatedInsulinDose.setColumns(10);
 		
 		JButton btnCalculateInsulinDose = new JButton("Oblicz dawk\u0119");
+		btnCalculateInsulinDose.setFont(new Font("Tahoma", Font.PLAIN, 20));
 		btnCalculateInsulinDose.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				//oblicznie dawki insuliny
 				//acctualUser.glycemyArray[counter+1]=tfActGlycemy.getText();
 				acctualUser.putValues(counter,tfActGlycemy.getText());
 				acctualUser.setGlycemy(Integer.parseInt(tfActGlycemy.getText()));
-				String dose =Integer.toString(acctualUser.calculateInsulinDose(acctualUser.getGlycemy(), 64));//poprawiæ zeby actuser mialo wartosc insulinoopornosci
-				tfCalcilatedInsulinDose.setText(dose);
+				//ustawic pole insulin resisstance
+				int insRes = acctualUser.getInsulinResistance();
+				String dose=null;
+				/*if(carboQuantity==0){
+					dose =Integer.toString(acctualUser.calculateInsulinDose(acctualUser.getGlycemy(), insRes));//poprawiæ zeby actuser mialo wartosc insulinoopornosci
+					tfCalcilatedInsulinDose.setText(dose);
+				}
+				else*/ if(carboQuantity!=0){
+					dose =Integer.toString(acctualUser.calculateInsulinDose(carboQuantity,acctualUser.getGlycemy(), insRes));//poprawiæ zeby actuser mialo wartosc insulinoopornosci
+					tfCalculatedInsulinDose.setText(dose);
+					System.out.println("dziala");
+				}else{
+				dose =Integer.toString(acctualUser.calculateInsulinDose(acctualUser.getGlycemy(), insRes));//poprawiæ zeby actuser mialo wartosc insulinoopornosci
+				tfCalculatedInsulinDose.setText(dose);
+				}
+				
 				LocalDate acctDate = LocalDate.now();
 				 Calendar cal = Calendar.getInstance();
 			     
@@ -522,14 +568,76 @@ public class UserInterface {
 				}*/
 			}
 		});
-		btnCalculateInsulinDose.setBounds(10, 135, 132, 39);
 		tabbedPaneCalculator.add(btnCalculateInsulinDose);
 		
-		tableMeal = new JTable();
-		tableMeal.setBounds(152, 11, 397, 163);
-		JScrollPane jspMeal = new JScrollPane();
+		lblPosiek = new JLabel("Posi\u0142ek:");
+		lblPosiek.setFont(new Font("Tahoma", Font.PLAIN, 20));
+		tabbedPaneCalculator.add(lblPosiek);
+		
+		tableMeal = new JTable(dtModelMeal);
+		//JScrollPane jspMeal = new JScrollPane();
 		tabbedPaneCalculator.add(tableMeal);
-		tableMeal.add(jspMeal);
+		tabbedPaneCalculator.add(new JScrollPane(tableMeal));
+		//tableMeal.add(jspMeal);
+		
+		panelFood = new JPanel();
+		panelFood.setToolTipText("");
+		tabbedPanelMainWindow.addTab("\u017Bywno\u015B\u0107", null, panelFood, null);
+		panelFood.setLayout(new BorderLayout(0, 0));
+		
+		tableFood = new JTable(dtModelFood);
+		panelFood.add(tableFood, BorderLayout.CENTER);
+		tableFood.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		//blokujemy przycisk jezeli zaden element nie jest wybrany
+		ListSelectionModel listSelectionModel = tableFood.getSelectionModel();
+		listSelectionModel.addListSelectionListener(new ListSelectionListener() {
+		        public void valueChanged(ListSelectionEvent arg0) { 
+		            ListSelectionModel lsm = (ListSelectionModel)arg0.getSource();
+		            btnAddFood.setEnabled(!lsm.isSelectionEmpty());
+		        }
+		});
+					
+		btnAddFood = new Button("Dodaj do posi\u0142ku");
+		btnAddFood.disable();		
+		btnAddFood.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				//double carboQuantity=0;	//przenieœæ na pocz¹tek	
+				// okienko dialogowe do pobierania informacji o ilosci sk³adnika z bazy
+				Component frame = null;
+				//String howMuch="0";
+				//Object options[]={"OK","Anuluj"};
+				String howMuch = (String)JOptionPane.showInputDialog(
+				                    frame,
+				                    "Wpisz iloœæ bior¹c pod uwagê jednostki \n"
+				                    + "podane w bazie posi³ków ³y¿ki, plastry itp.\n"
+				                    +"Pamiêtaj mo¿esz podaæ tylko liczby (ca³kowite lub u³amki)",
+				                    "Iloœæ sk³adnika",
+				                    JOptionPane.QUESTION_MESSAGE
+				                   );
+				//if(howMuch==null){setLabel("adas");}
+				
+				double quantity = Double.parseDouble(howMuch);
+				int foodTableRow = tableFood.getSelectedRow();
+				//String cq =(String) tableFood.getValueAt(foodTableRow,4);
+				double mealCarboQuantity = Double.parseDouble(tableFood.getValueAt(foodTableRow,4).toString())*quantity;
+				//Double cq = Double.parseDouble(mealCarboQuantity);
+				
+				carboQuantity = carboQuantity + mealCarboQuantity;
+				System.out.println(carboQuantity);
+				//System.out.println(acctualUser.calculateInsulinDose(carboQuantity, acctualUser.getGlycemy(), acctualUser.getInsulinResistance()));
+				//System.out.println(tableFood.getValueAt(foodTableRow,4));
+				//dodac oblicznie bolusa na podstawie danych z tabeli
+			    mealRow = new Object[] {tableFood.getValueAt(foodTableRow,0),tableFood.getValueAt(foodTableRow,1),
+			    		tableFood.getValueAt(foodTableRow,2),tableFood.getValueAt(foodTableRow,3),tableFood.getValueAt(foodTableRow,4)};
+				dtModelMeal.addRow(mealRow);
+								
+			}
+		});
+		btnAddFood.setActionCommand("Dodaj do posi\u0142ku");
+		panelFood.add(btnAddFood, BorderLayout.SOUTH);
+		
+		//scrollPane = new JScrollPane();
+		panelFood.add(new JScrollPane(tableFood));
 		
 		panelHistory = new JPanel();		
 		tabbedPanelMainWindow.addTab("Historia", null, panelHistory, null);
@@ -541,27 +649,6 @@ public class UserInterface {
 		JScrollPane jspHistory= new JScrollPane(tableUserData);
 		panelHistory.add(jspHistory);
 		tableUserData.setFillsViewportHeight(true);
-		
-		panelFood = new JPanel();
-		tabbedPanelMainWindow.addTab("\u017Bywno\u015B\u0107", null, panelFood, null);
-		panelFood.setLayout(new BorderLayout(0, 0));
-		
-		tableFood = new JTable(dtModelFood);
-		panelFood.add(tableFood, BorderLayout.CENTER);
-		
-		btnAddFood = new Button("Dodaj do pisi\u0142ku");
-		btnAddFood.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
-				
-				
-				
-			}
-		});
-		btnAddFood.setActionCommand("Dodaj do posi\u0142ku");
-		panelFood.add(btnAddFood, BorderLayout.SOUTH);
-		
-		//scrollPane = new JScrollPane();
-		panelFood.add(new JScrollPane(tableFood));
 				
 		
 	}
